@@ -6,6 +6,63 @@ dotenv.config({
 })
 
 connectDB()
+.then(()=>{
+    app.on("error",(error)=>{
+        console.log("Error",error);
+        throw error;
+    })
+    app.listen(process.env.PORT || 8000,()=>{
+        console.log(`server is running on Port ${process.env.PORT}`);
+    });
+})
+.catch((err)=>{
+    console.log("Mongo Db Connection Failed !",err);
+})
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // reqiure('dotenv').config({path:"./env"})
 //This will also work But to remove Inconsistancy we use import wala statement 
