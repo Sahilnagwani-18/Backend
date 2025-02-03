@@ -3,6 +3,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { User } from "../models/user.model.js"
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import { request } from "express";
 //make this Function Async Because It will Take Time For Upload ON cloudinary
 const registerUser =asyncHandler(async(req,res)=>{
     //Get User Details From Frontend ..
@@ -25,7 +26,7 @@ const registerUser =asyncHandler(async(req,res)=>{
      throw new ApiError(400,"All Fields Must Be Filled!!");
    }
    //User Exists Karta hai Ya Nhi >>Check
-   const existedUser=User.findOne({
+   const existedUser=await User.findOne({
     $or:[{username},{email}]
    })
 
@@ -37,9 +38,12 @@ const registerUser =asyncHandler(async(req,res)=>{
     //Multer Added Request.files Options For this
 
    const avatarLocalPath=req.files?.avatar[0]?.path;
-   const coverImageLocalPath=req.files?.coverImage[0]?.path;
-   const x=req.files?.avatar;
-   console.log(x);
+   let coverImageLocalPath;
+   if(req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length>0){
+       coverImageLocalPath=req.files.coverImage[0].path
+   }
+   
+ 
    //Try To console.log This Also To get Better Understanding
 
    if(!avatarLocalPath){
@@ -57,7 +61,8 @@ const registerUser =asyncHandler(async(req,res)=>{
      avatar:avatar.url,
      coverImage:coverImage?.url || "",
      email,
-     username:username.toLowerCase()
+     username:username.toLowerCase(),
+     password,
    })
    const createdUser=await User.findById(user._id).select(
      "-password -refreshToken"
@@ -66,7 +71,7 @@ const registerUser =asyncHandler(async(req,res)=>{
    if(!createdUser){
        throw new ApiError(500,"Something went Wrong While Registering The User!!");
    }
-   return res.this.status(201).json(
+   return res.status(201).json(
        new ApiResponse(200,createdUser,"User Registered successfuly")
    )
 })
