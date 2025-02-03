@@ -4,6 +4,24 @@ import { User } from "../models/user.model.js"
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { request } from "express";
+
+const generateAccessAndRefereshToken= async(userId)=>{
+    try{
+      const user=await User.findById(userId);
+      const accessToken=user.generateAccessToken()
+      const refreshToken=user.generateRefreshToken()
+
+      user.refreshToken=refreshToken
+      await user.save({validateBeforeSave:false})
+
+      return {accessToken,refreshToken}
+
+    }
+    catch(error){
+      throw new ApiError(500,"Something Went Wrong While Genrating Refresh and access Tokens");
+    }
+}
+
 //make this Function Async Because It will Take Time For Upload ON cloudinary
 const registerUser =asyncHandler(async(req,res)=>{
     //Get User Details From Frontend ..
@@ -76,4 +94,62 @@ const registerUser =asyncHandler(async(req,res)=>{
    )
 })
 
-export {registerUser}
+const loginUser = asyncHandler(async(req,res)=>{
+  //Todos
+   //1 Get all the details of user 
+   //Search For an existing User 
+   //If user Exists then Check Password Matched with User name 
+   //If matched Accesss Token Give 
+   //Send Coookies And say That Login done!!
+   //If Not Then Try Again
+
+   const {email,username,password}=req.body;
+
+   if(!username || !email){
+      throw new ApiError(400,"username or email is Required");
+   }
+   const user= await User.findOne({
+    $or:[{email},{username}]
+   })
+   if(!user){
+      throw new ApiError(404,"User Does not Exists");
+   }
+
+   const isPasswordValid=await user.isPasswordCorrect(password)
+   if(!isPasswordValid){
+    throw new ApiError(401,"Invalid user credentials");;
+   }
+   const {accessToken,refreshToken}=await generateAccessAndRefereshToken(user._id)
+   const loggedInUser=await User.findById(user._id).select(
+    "-password -refreshToken"
+   )
+
+   const options={
+      httpOnly:true,
+      //Http Only :Basically Cookies Can be modified by anyone from frontend so to ignore that httpOnly is used
+      //Now the cookies will be only server Modifyable 
+      secure:true
+   }
+   return res
+   .status(200)
+   .cookie("accessToken",accessToken,options)
+   .cookie("refreshToken",refreshToken,options)
+   .json(
+     new ApiResponse(
+      200,{
+        user:loggedInUser,accessToken,refreshToken
+      },
+      "User Logged In SuccessFully"
+     )
+   )
+
+})
+
+const logoutUser = asyncHandler(async(req,res)=>{
+    //1)Remove Cookies 
+})
+
+
+export {
+  registerUser,loginUser
+}
